@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MCP 客户端测试</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          Arial, sans-serif;
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+        background-color: #f8f9fa;
+      }
+      h1,
+      h2 {
+        color: #333;
+      }
+      .container {
+        background-color: white;
+        border-radius: 8px;
+        padding: 20px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        margin-bottom: 20px;
+      }
+      .input-container {
+        display: flex;
+        margin-bottom: 20px;
+      }
+      input[type="text"] {
+        flex: 1;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 16px;
+      }
+      button {
+        background-color: #007bff;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        padding: 10px 15px;
+        margin-left: 10px;
+        cursor: pointer;
+        font-size: 16px;
+      }
+      button:hover {
+        background-color: #0069d9;
+      }
+      .response {
+        margin-top: 20px;
+        padding: 15px;
+        border-radius: 4px;
+        background-color: #f5f5f5;
+        white-space: pre-wrap;
+      }
+      .examples {
+        list-style-type: none;
+        padding: 0;
+      }
+      .examples li {
+        padding: 8px 0;
+        cursor: pointer;
+        color: #007bff;
+      }
+      .examples li:hover {
+        text-decoration: underline;
+      }
+      .app-list {
+        margin-top: 20px;
+      }
+      .app-item {
+        display: flex;
+        justify-content: space-between;
+        padding: 10px;
+        border-bottom: 1px solid #eee;
+      }
+      .app-item:last-child {
+        border-bottom: none;
+      }
+      .doubao-section {
+        margin-top: 20px;
+        padding: 15px;
+        background-color: #f0f7ff;
+        border-radius: 8px;
+      }
+      .doubao-section h3 {
+        color: #0056b3;
+        margin-top: 0;
+      }
+      .doubao-section p {
+        color: #666;
+        margin-bottom: 15px;
+      }
+      .chat-container {
+        margin-top: 20px;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        overflow: hidden;
+      }
+      .chat-messages {
+        height: 300px;
+        overflow-y: auto;
+        padding: 15px;
+        background-color: #fff;
+      }
+      .message {
+        margin-bottom: 10px;
+        padding: 10px;
+        border-radius: 8px;
+        max-width: 80%;
+      }
+      .user-message {
+        background-color: #e3f2fd;
+        margin-left: auto;
+      }
+      .bot-message {
+        background-color: #f5f5f5;
+        margin-right: auto;
+      }
+      .chat-input {
+        display: flex;
+        padding: 10px;
+        background-color: #f8f9fa;
+        border-top: 1px solid #ddd;
+      }
+      .chat-input input {
+        flex: 1;
+        padding: 8px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        margin-right: 10px;
+      }
+      .chat-input button {
+        padding: 8px 15px;
+      }
+      .voice-button {
+        background-color: #28a745;
+        margin-right: 10px;
+      }
+      .voice-button:hover {
+        background-color: #218838;
+      }
+      .voice-button.recording {
+        background-color: #dc3545;
+        animation: pulse 1.5s infinite;
+      }
+      @keyframes pulse {
+        0% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.5;
+        }
+        100% {
+          opacity: 1;
+        }
+      }
+      .voice-status {
+        font-size: 12px;
+        color: #666;
+        margin-top: 5px;
+        text-align: center;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>MCP 程序启动服务测试</h1>
+
+    <nav style="margin-bottom: 20px">
+      <a
+        href="voice-clone.html"
+        style="
+          padding: 8px 15px;
+          background-color: #28a745;
+          color: white;
+          text-decoration: none;
+          border-radius: 4px;
+        "
+        >进入语音克隆页面</a
+      >
+    </nav>
+
+    <div class="container">
+      <h2>发送请求</h2>
+      <div class="input-container">
+        <input type="text" id="mcpInput" placeholder="例如：请帮我打开微信" />
+        <button id="sendButton">发送</button>
+      </div>
+
+      <h3>示例命令：</h3>
+      <ul class="examples">
+        <li onclick="useExample('请帮我打开微信')">请帮我打开微信</li>
+        <li onclick="useExample('请帮我打开桌面的微信')">
+          请帮我打开桌面的微信
+        </li>
+        <li onclick="useExample('请帮我启动Chrome')">请帮我启动Chrome</li>
+      </ul>
+
+      <div class="response" id="responseArea">响应将显示在这里...</div>
+    </div>
+
+    <div class="container">
+      <h2>已配置应用</h2>
+      <div id="appList" class="app-list">
+        <div class="app-item">
+          <span>加载中...</span>
+        </div>
+      </div>
+
+      <h3>添加新应用</h3>
+      <div class="input-container">
+        <input type="text" id="appName" placeholder="应用名称" />
+        <input
+          type="text"
+          id="appPath"
+          placeholder="应用路径"
+          style="margin-left: 10px"
+        />
+        <button id="addAppButton">添加</button>
+      </div>
+    </div>
+
+    <div class="container doubao-section">
+      <h3>豆包AI集成</h3>
+      <p>您可以通过豆包AI发送命令来控制应用程序。以下是使用步骤：</p>
+      <ol>
+        <li>打开豆包AI应用或网页</li>
+        <li>发送类似"请帮我打开微信"的命令</li>
+        <li>豆包AI会通过MCP服务执行您的请求</li>
+      </ol>
+      <p>支持的命令示例：</p>
+      <ul>
+        <li>请帮我打开微信</li>
+        <li>请帮我启动Chrome</li>
+        <li>请帮我打开网易云音乐</li>
+        <li>请帮我打开终端</li>
+      </ul>
+
+      <div class="chat-container">
+        <div id="chatMessages" class="chat-messages"></div>
+        <div class="chat-input">
+          <button
+            id="voiceButton"
+            class="voice-button"
+            onclick="toggleVoiceInput()"
+          >
+            <img
+              style="width: 40px; height: 40px"
+              src="/static/video.png"
+              alt="麦克风"
+            />
+          </button>
+          <input
+            type="text"
+            id="doubaoInput"
+            placeholder="输入消息或点击麦克风说话..."
+          />
+          <button onclick="sendDoubaoMessage()">发送</button>
+        </div>
+        <div id="voiceStatus" class="voice-status"></div>
+      </div>
+    </div>
+
+    <script>
+      const API_URL = "https://5078-39-174-90-184.ngrok-free.app";
+
+      // 发送MCP请求
+      async function sendMcpRequest() {
+        const text = document.getElementById("mcpInput").value.trim();
+        if (!text) {
+          alert("请输入有效的命令");
+          return;
+        }
+
+        try {
+          const response = await fetch(`${API_URL}/mcp`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ text }),
+          });
+
+          const data = await response.json();
+          document.getElementById("responseArea").textContent = JSON.stringify(
+            data,
+            null,
+            2
+          );
+        } catch (error) {
+          document.getElementById(
+            "responseArea"
+          ).textContent = `错误: ${error.message}`;
+        }
+      }
+
+      // 获取应用列表
+      async function getApps() {
+        try {
+          const response = await fetch(`${API_URL}/apps`);
+          const apps = await response.json();
+
+          const appList = document.getElementById("appList");
+          appList.innerHTML = "";
+
+          if (Object.keys(apps).length === 0) {
+            appList.innerHTML =
+              '<div class="app-item"><span>没有已配置的应用</span></div>';
+            return;
+          }
+
+          for (const [name, path] of Object.entries(apps)) {
+            const appItem = document.createElement("div");
+            appItem.className = "app-item";
+
+            const nameSpan = document.createElement("span");
+            nameSpan.textContent = name;
+
+            const pathSpan = document.createElement("span");
+            pathSpan.textContent = path;
+            pathSpan.style.color = "#666";
+            pathSpan.style.fontSize = "0.9em";
+
+            const deleteButton = document.createElement("button");
+            deleteButton.textContent = "删除";
+            deleteButton.style.backgroundColor = "#dc3545";
+            deleteButton.onclick = () => deleteApp(name);
+
+            appItem.appendChild(nameSpan);
+            appItem.appendChild(pathSpan);
+            appItem.appendChild(deleteButton);
+
+            appList.appendChild(appItem);
+          }
+        } catch (error) {
+          console.error("获取应用列表失败:", error);
+        }
+      }
+
+      // 添加新应用
+      async function addApp() {
+        const name = document.getElementById("appName").value.trim();
+        const path = document.getElementById("appPath").value.trim();
+
+        if (!name || !path) {
+          alert("应用名称和路径不能为空");
+          return;
+        }
+
+        try {
+          const response = await fetch(`${API_URL}/apps`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ name, path }),
+          });
+
+          const result = await response.json();
+          alert(result.message);
+
+          if (result.success) {
+            document.getElementById("appName").value = "";
+            document.getElementById("appPath").value = "";
+            getApps();
+          }
+        } catch (error) {
+          alert(`添加应用失败: ${error.message}`);
+        }
+      }
+
+      // 删除应用
+      async function deleteApp(name) {
+        if (!confirm(`确定要删除"${name}"吗？`)) {
+          return;
+        }
+
+        try {
+          const response = await fetch(`${API_URL}/apps/${name}`, {
+            method: "DELETE",
+          });
+
+          const result = await response.json();
+          alert(result.message);
+
+          if (result.success) {
+            getApps();
+          }
+        } catch (error) {
+          alert(`删除应用失败: ${error.message}`);
+        }
+      }
+
+      // 使用示例命令
+      function useExample(text) {
+        document.getElementById("mcpInput").value = text;
+      }
+
+      // 事件监听
+      document
+        .getElementById("sendButton")
+        .addEventListener("click", sendMcpRequest);
+      document
+        .getElementById("mcpInput")
+        .addEventListener("keypress", function (e) {
+          if (e.key === "Enter") {
+            sendMcpRequest();
+          }
+        });
+      document.getElementById("addAppButton").addEventListener("click", addApp);
+
+      // 初始化
+      document.addEventListener("DOMContentLoaded", getApps);
+
+      // 发送豆包AI消息
+      async function sendDoubaoMessage() {
+        const message = document.getElementById("doubaoInput").value.trim();
+        if (!message) {
+          alert("请输入消息");
+          return;
+        }
+
+        // 添加用户消息到聊天界面
+        addMessage(message, "user");
+
+        try {
+          const response = await fetch(`${API_URL}/doubao`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ message }),
+          });
+
+          const data = await response.json();
+
+          // 添加机器人回复到聊天界面
+          addMessage(data.message, "bot");
+
+          // 如果成功执行了应用启动操作，刷新应用列表
+          if (data.success && data.action === "launch") {
+            getApps();
+          }
+        } catch (error) {
+          addMessage(`错误: ${error.message}`, "bot");
+        }
+
+        // 清空输入框
+        document.getElementById("doubaoInput").value = "";
+      }
+
+      // 添加消息到聊天界面
+      function addMessage(text, type) {
+        const chatMessages = document.getElementById("chatMessages");
+        const messageDiv = document.createElement("div");
+        messageDiv.className = `message ${type}-message`;
+        messageDiv.textContent = text;
+        chatMessages.appendChild(messageDiv);
+
+        // 滚动到底部
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+      }
+
+      // 语音识别相关变量
+      let recognition = null;
+      let isRecording = false;
+
+      // 初始化语音识别
+      function initSpeechRecognition() {
+        if ("webkitSpeechRecognition" in window) {
+          recognition = new webkitSpeechRecognition();
+          recognition.continuous = false;
+          recognition.interimResults = true;
+          recognition.lang = "zh-CN";
+
+          recognition.onstart = function () {
+            isRecording = true;
+            document.getElementById("voiceButton").classList.add("recording");
+            document.getElementById("voiceStatus").textContent = "正在聆听...";
+          };
+
+          recognition.onresult = function (event) {
+            const transcript = Array.from(event.results)
+              .map((result) => result[0])
+              .map((result) => result.transcript)
+              .join("");
+
+            document.getElementById("doubaoInput").value = transcript;
+          };
+
+          recognition.onerror = function (event) {
+            console.error("语音识别错误:", event.error);
+            document.getElementById(
+              "voiceStatus"
+            ).textContent = `错误: ${event.error}`;
+            stopRecording();
+          };
+
+          recognition.onend = function () {
+            stopRecording();
+            // 如果识别到内容，自动发送
+            if (document.getElementById("doubaoInput").value.trim()) {
+              sendDoubaoMessage();
+            }
+          };
+        } else {
+          document.getElementById("voiceStatus").textContent =
+            "您的浏览器不支持语音识别";
+        }
+      }
+
+      // 切换语音输入状态
+      function toggleVoiceInput() {
+        if (!recognition) {
+          initSpeechRecognition();
+        }
+
+        if (isRecording) {
+          stopRecording();
+        } else {
+          startRecording();
+        }
+      }
+
+      // 开始录音
+      function startRecording() {
+        try {
+          recognition.start();
+        } catch (error) {
+          console.error("启动语音识别失败:", error);
+          document.getElementById("voiceStatus").textContent =
+            "启动语音识别失败";
+        }
+      }
+
+      // 停止录音
+      function stopRecording() {
+        isRecording = false;
+        document.getElementById("voiceButton").classList.remove("recording");
+        document.getElementById("voiceStatus").textContent = "";
+      }
+
+      // 页面加载完成后初始化
+      document.addEventListener("DOMContentLoaded", function () {
+        // 检查浏览器是否支持语音识别
+        if (!("webkitSpeechRecognition" in window)) {
+          document.getElementById("voiceButton").style.display = "none";
+          document.getElementById("voiceStatus").textContent =
+            "您的浏览器不支持语音识别";
+        }
+      });
+    </script>
+  </body>
+</html>

@@ -1,0 +1,9 @@
+{
+  "apps": {
+    "微信": "/Applications/WeChat.app",
+    "Chrome": "/Applications/Google Chrome.app",
+    "终端": "/System/Applications/Utilities/Terminal.app",
+    "记事本": "/System/Applications/TextEdit.app",
+    "网易云音乐": "/Applications/NeteaseMusic.app"
+  }
+}
