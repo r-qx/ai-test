@@ -264,7 +264,7 @@
     </div>
 
     <script>
-      const API_URL = "https://5078-39-174-90-184.ngrok-free.app";
+      const API_URL = "https://23d4-39-174-90-184.ngrok-free.app";
 
       // 发送MCP请求
       async function sendMcpRequest() {
@@ -275,6 +275,9 @@
         }
 
         try {
+          const responseArea = document.getElementById("responseArea");
+          responseArea.textContent = "正在发送请求...";
+
           const response = await fetch(`${API_URL}/mcp`, {
             method: "POST",
             headers: {
@@ -283,12 +286,20 @@
             body: JSON.stringify({ text }),
           });
 
+          // 检查响应类型
+          const contentType = response.headers.get("content-type");
+          if (!contentType || !contentType.includes("application/json")) {
+            throw new Error(
+              `服务器返回了非JSON格式的响应: ${contentType || "未知类型"}`
+            );
+          }
+
+          if (!response.ok) {
+            throw new Error(`服务器返回错误状态码: ${response.status}`);
+          }
+
           const data = await response.json();
-          document.getElementById("responseArea").textContent = JSON.stringify(
-            data,
-            null,
-            2
-          );
+          responseArea.textContent = JSON.stringify(data, null, 2);
         } catch (error) {
           document.getElementById(
             "responseArea"
@@ -300,6 +311,17 @@
       async function getApps() {
         try {
           const response = await fetch(`${API_URL}/apps`);
+
+          // 检查响应类型
+          const contentType = response.headers.get("content-type");
+          if (!contentType || !contentType.includes("application/json")) {
+            throw new Error(`服务器返回了非JSON格式的响应: ${contentType}`);
+          }
+
+          if (!response.ok) {
+            throw new Error(`服务器返回错误状态码: ${response.status}`);
+          }
+
           const apps = await response.json();
 
           const appList = document.getElementById("appList");
@@ -336,6 +358,12 @@
           }
         } catch (error) {
           console.error("获取应用列表失败:", error);
+          // 显示友好的错误信息到界面
+          const appList = document.getElementById("appList");
+          appList.innerHTML = `<div class="app-item" style="color: #dc3545">
+            <span>获取应用列表失败: ${error.message}</span>
+            <button onclick="getApps()">重试</button>
+          </div>`;
         }
       }
 
@@ -358,6 +386,18 @@
             body: JSON.stringify({ name, path }),
           });
 
+          // 检查响应类型
+          const contentType = response.headers.get("content-type");
+          if (!contentType || !contentType.includes("application/json")) {
+            throw new Error(
+              `服务器返回了非JSON格式的响应: ${contentType || "未知类型"}`
+            );
+          }
+
+          if (!response.ok) {
+            throw new Error(`服务器返回错误状态码: ${response.status}`);
+          }
+
           const result = await response.json();
           alert(result.message);
 
@@ -367,6 +407,7 @@
             getApps();
           }
         } catch (error) {
+          console.error("添加应用失败:", error);
           alert(`添加应用失败: ${error.message}`);
         }
       }
@@ -382,6 +423,18 @@
             method: "DELETE",
           });
 
+          // 检查响应类型
+          const contentType = response.headers.get("content-type");
+          if (!contentType || !contentType.includes("application/json")) {
+            throw new Error(
+              `服务器返回了非JSON格式的响应: ${contentType || "未知类型"}`
+            );
+          }
+
+          if (!response.ok) {
+            throw new Error(`服务器返回错误状态码: ${response.status}`);
+          }
+
           const result = await response.json();
           alert(result.message);
 
@@ -389,6 +442,7 @@
             getApps();
           }
         } catch (error) {
+          console.error("删除应用失败:", error);
           alert(`删除应用失败: ${error.message}`);
         }
       }
@@ -425,6 +479,16 @@
         // 添加用户消息到聊天界面
         addMessage(message, "user");
 
+        // 清空输入框并禁用
+        const inputField = document.getElementById("doubaoInput");
+        const originalMessage = inputField.value;
+        inputField.value = "";
+        inputField.disabled = true;
+
+        // 显示加载消息
+        const loadingMsgId = "loading-msg-" + Date.now();
+        addMessage("正在思考...", "bot", loadingMsgId);
+
         try {
           const response = await fetch(`${API_URL}/doubao`, {
             method: "POST",
@@ -434,7 +498,22 @@
             body: JSON.stringify({ message }),
           });
 
+          // 检查响应类型
+          const contentType = response.headers.get("content-type");
+          if (!contentType || !contentType.includes("application/json")) {
+            throw new Error(
+              `服务器返回了非JSON格式的响应: ${contentType || "未知类型"}`
+            );
+          }
+
+          if (!response.ok) {
+            throw new Error(`服务器返回错误状态码: ${response.status}`);
+          }
+
           const data = await response.json();
+
+          // 移除加载消息
+          removeMessage(loadingMsgId);
 
           // 添加机器人回复到聊天界面
           addMessage(data.message, "bot");
@@ -444,28 +523,51 @@
             getApps();
           }
         } catch (error) {
-          addMessage(`错误: ${error.message}`, "bot");
-        }
+          console.error("获取豆包回复失败:", error);
 
-        // 清空输入框
-        document.getElementById("doubaoInput").value = "";
+          // 移除加载消息
+          removeMessage(loadingMsgId);
+
+          // 添加错误消息
+          addMessage(`请求失败: ${error.message}`, "bot");
+        } finally {
+          // 恢复输入框
+          inputField.disabled = false;
+        }
       }
 
-      // 添加消息到聊天界面
-      function addMessage(text, type) {
+      // 添加消息到聊天界面，可选地指定消息ID
+      function addMessage(text, type, msgId) {
         const chatMessages = document.getElementById("chatMessages");
         const messageDiv = document.createElement("div");
         messageDiv.className = `message ${type}-message`;
         messageDiv.textContent = text;
+
+        if (msgId) {
+          messageDiv.id = msgId;
+        }
+
         chatMessages.appendChild(messageDiv);
 
         // 滚动到底部
         chatMessages.scrollTop = chatMessages.scrollHeight;
+
+        return messageDiv;
+      }
+
+      // 删除指定ID的消息
+      function removeMessage(msgId) {
+        const messageElement = document.getElementById(msgId);
+        if (messageElement) {
+          messageElement.remove();
+        }
       }
 
       // 语音识别相关变量
       let recognition = null;
       let isRecording = false;
+      let retryCount = 0;
+      const MAX_RETRIES = 3;
 
       // 初始化语音识别
       function initSpeechRecognition() {
@@ -482,6 +584,8 @@
           };
 
           recognition.onresult = function (event) {
+            // 重置重试计数
+            retryCount = 0;
             const transcript = Array.from(event.results)
               .map((result) => result[0])
               .map((result) => result.transcript)
@@ -492,17 +596,61 @@
 
           recognition.onerror = function (event) {
             console.error("语音识别错误:", event.error);
-            document.getElementById(
-              "voiceStatus"
-            ).textContent = `错误: ${event.error}`;
+            let errorMessage = "语音识别错误";
+
+            // 针对不同错误类型提供具体信息
+            if (event.error === "network") {
+              errorMessage = "网络连接错误，请检查您的网络";
+
+              // 尝试自动重试网络错误
+              if (retryCount < MAX_RETRIES) {
+                retryCount++;
+                document.getElementById(
+                  "voiceStatus"
+                ).textContent = `网络连接错误，正在重试 (${retryCount}/${MAX_RETRIES})...`;
+
+                // 延迟2秒后重试
+                setTimeout(() => {
+                  try {
+                    if (isRecording) {
+                      recognition.start();
+                    }
+                  } catch (error) {
+                    console.error("重试语音识别失败:", error);
+                    stopRecording();
+                    document.getElementById("voiceStatus").textContent =
+                      "重试失败，请手动重试";
+                  }
+                }, 2000);
+
+                return; // 不调用stopRecording，因为我们要重试
+              }
+            } else if (event.error === "not-allowed") {
+              errorMessage = "麦克风访问被拒绝";
+            } else if (event.error === "aborted") {
+              errorMessage = "语音识别被中断";
+            } else if (event.error === "audio-capture") {
+              errorMessage = "无法捕获音频";
+            } else if (event.error === "no-speech") {
+              errorMessage = "未检测到语音";
+            } else if (event.error === "speech-timeout") {
+              errorMessage = "语音输入超时";
+            } else {
+              errorMessage = `错误: ${event.error}`;
+            }
+
+            document.getElementById("voiceStatus").textContent = errorMessage;
             stopRecording();
           };
 
           recognition.onend = function () {
-            stopRecording();
-            // 如果识别到内容，自动发送
-            if (document.getElementById("doubaoInput").value.trim()) {
-              sendDoubaoMessage();
+            // 如果不是由于错误导致的结束且仍在录音状态，处理结果
+            if (isRecording) {
+              stopRecording();
+              // 如果识别到内容，自动发送
+              if (document.getElementById("doubaoInput").value.trim()) {
+                sendDoubaoMessage();
+              }
             }
           };
         } else {

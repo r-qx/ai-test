@@ -4,6 +4,7 @@
     "Chrome": "/Applications/Google Chrome.app",
     "终端": "/System/Applications/Utilities/Terminal.app",
     "记事本": "/System/Applications/TextEdit.app",
-    "网易云音乐": "/Applications/NeteaseMusic.app"
+    "网易云音乐": "/Applications/NeteaseMusic.app",
+    "qq": "C:\\Program Files (x86)\\Tencent\\QQNT\\QQ.exe"
   }
 }

@@ -389,9 +389,9 @@ app.post("/voice-clone", async (req, res) => {
   }
 
   // 271327409115518 - y
-  // 271326402150782 - r
+  // 274177726677260 - r
   // 测试
-  fileId = 271327409115518;
+  fileId = 274177726677260;
   try {
     const voiceId = `voice_rqx_${Date.now()}`;
     const cloneRequestData = {

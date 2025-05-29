@@ -217,6 +217,33 @@
           请录制一段15-30秒的清晰语音，用于声音克隆。语音越清晰，克隆效果越好。
         </p>
 
+        <div
+          class="model-selector"
+          style="
+            margin-bottom: 15px;
+            padding: 10px;
+            background-color: #f0f7ff;
+            border-radius: 8px;
+          "
+        >
+          <h4 style="margin-top: 0; margin-bottom: 10px; color: #0056b3">
+            选择模型:
+          </h4>
+          <div style="display: flex; gap: 10px">
+            <label style="display: flex; align-items: center; cursor: pointer">
+              <input type="radio" name="model-type" value="doubao" checked />
+              <span style="margin-left: 5px">豆包模型</span>
+            </label>
+            <label style="display: flex; align-items: center; cursor: pointer">
+              <input type="radio" name="model-type" value="minimax" />
+              <span style="margin-left: 5px">MiniMax模型</span>
+            </label>
+          </div>
+          <p style="margin-top: 8px; font-size: 12px; color: #666">
+            不同模型可能有不同的克隆效果和速度，您可以尝试比较。
+          </p>
+        </div>
+
         <button id="recordButton" class="record-button">开始录制</button>
         <button id="stopButton" disabled>停止录制</button>
         <div id="recordingStatus" class="status">准备录制...</div>
@@ -284,7 +311,7 @@
         true
       );
 
-      const API_URL = "https://5078-39-174-90-184.ngrok-free.app";
+      const API_URL = "https://23d4-39-174-90-184.ngrok-free.app";
       let mediaRecorder;
       let audioChunks = [];
       let recordedBlob;
@@ -292,6 +319,7 @@
       let cloneId = null;
       let currentStep = 1;
       let fileId = 271037913805182;
+      let model = "doubao"; // doubao or minimax
 
       // DOM元素
       const recordButton = document.getElementById("recordButton");
@@ -360,6 +388,68 @@
         .getElementById("sendTextButton")
         .addEventListener("click", sendTextMessage);
 
+      // 绑定模型选择器事件
+      document.addEventListener("DOMContentLoaded", function () {
+        // 从本地存储中获取上次选择的模型
+        const savedModel = localStorage.getItem("voiceCloneModel");
+        if (
+          savedModel &&
+          (savedModel === "doubao" || savedModel === "minimax")
+        ) {
+          model = savedModel;
+        }
+
+        // 获取所有模型选择单选按钮
+        const modelRadios = document.querySelectorAll(
+          'input[name="model-type"]'
+        );
+
+        // 为每个单选按钮添加change事件监听器
+        modelRadios.forEach((radio) => {
+          radio.addEventListener("change", function () {
+            if (this.checked) {
+              model = this.value;
+              console.log(`已切换到${model}模型`);
+
+              // 保存选择到本地存储
+              localStorage.setItem("voiceCloneModel", model);
+
+              // 显示模型切换提示
+              const modelName = model === "doubao" ? "豆包" : "MiniMax";
+              const statusElement = document.getElementById("recordingStatus");
+              if (statusElement) {
+                statusElement.textContent = `已切换到${modelName}模型`;
+
+                // 2秒后恢复原来的状态信息
+                setTimeout(() => {
+                  if (isRecording) {
+                    statusElement.textContent = "正在录音...";
+                  } else {
+                    statusElement.textContent = "准备录制...";
+                  }
+                }, 2000);
+              }
+
+              // 重置状态
+              if (submitRecording) {
+                submitRecording.disabled = true;
+              }
+              if (recordedAudio) {
+                recordedAudio.src = "";
+              }
+              if (audioDuration) {
+                audioDuration.textContent = "";
+              }
+            }
+          });
+        });
+
+        // 初始化设置模型选择器
+        document.querySelector(
+          `input[name="model-type"][value="${model}"]`
+        ).checked = true;
+      });
+
       // 开始录音
       async function startForVoice() {
         try {
@@ -424,8 +514,6 @@
         }
       }
 
-      let model = "doubao"; // doubao or minimax
-
       // 提交音频进行上传
       async function submitAudioForCloning() {
         if (!recordedBlob) {
@@ -434,6 +522,13 @@
         }
 
         try {
+          // 更新按钮状态和提示信息
+          submitRecording.disabled = true;
+          submitRecording.textContent = "处理中...";
+          recordingStatus.textContent = `正在处理并上传到${
+            model === "doubao" ? "豆包" : "MiniMax"
+          }服务...`;
+
           // 将 Blob 转换为 Base64
           const reader = new FileReader();
           reader.readAsDataURL(recordedBlob);
@@ -466,8 +561,14 @@
                 );
                 const queryStatusResult = await queryStatusResponse.json();
                 console.log(queryStatusResult, "queryStatusResult===");
+
+                recordingStatus.textContent = "上传成功，可以进行对话了";
+                submitRecording.textContent = "提交成功";
               } else {
                 alert("上传失败: " + (uploadResult.message || "未知错误"));
+                submitRecording.disabled = false;
+                submitRecording.textContent = "提交录音并进行克隆";
+                recordingStatus.textContent = "上传失败，请重试";
               }
             } else {
               const uploadResponse = await fetch(`${API_URL}/create-voice`, {
@@ -483,14 +584,22 @@
               if (uploadResult.success) {
                 fileId = uploadResult.fileId;
                 // updateStep(2);
+                recordingStatus.textContent = "上传成功，可以进行对话了";
+                submitRecording.textContent = "提交成功";
               } else {
                 alert("上传失败: " + (uploadResult.message || "未知错误"));
+                submitRecording.disabled = false;
+                submitRecording.textContent = "提交录音并进行克隆";
+                recordingStatus.textContent = "上传失败，请重试";
               }
             }
           };
         } catch (error) {
           console.error("处理音频数据失败:", error);
           alert("处理音频数据失败: " + error.message);
+          submitRecording.disabled = false;
+          submitRecording.textContent = "提交录音并进行克隆";
+          recordingStatus.textContent = "处理失败，请重试";
         }
       }
 
@@ -635,6 +744,8 @@
       // 语音识别相关变量
       let recognition = null;
       let isRecording2 = false;
+      let retryCount = 0;
+      const MAX_RETRIES = 3;
 
       // 初始化语音识别
       function initSpeechRecognition() {
@@ -652,6 +763,9 @@
           };
 
           recognition.onresult = function (event) {
+            // 重置重试计数
+            retryCount = 0;
+
             const transcript = Array.from(event.results)
               .map((result) => result[0])
               .map((result) => result.transcript)
@@ -661,18 +775,62 @@
           };
 
           recognition.onerror = function (event) {
-            console.error("语音识别错误:", event.error);
-            document.getElementById(
-              "messageStatus"
-            ).textContent = `错误: ${event.error}`;
+            console.error("语音识别错误:", event);
+            let errorMessage = "语音识别错误";
+
+            // 针对不同错误类型提供具体信息
+            if (event.error === "network") {
+              errorMessage = "网络连接错误，请检查您的网络";
+
+              // 尝试自动重试网络错误
+              if (retryCount < MAX_RETRIES) {
+                retryCount++;
+                document.getElementById(
+                  "messageStatus"
+                ).textContent = `网络连接错误，正在重试 (${retryCount}/${MAX_RETRIES})...`;
+
+                // 延迟2秒后重试
+                setTimeout(() => {
+                  try {
+                    if (isRecording2) {
+                      recognition.start();
+                    }
+                  } catch (error) {
+                    console.error("重试语音识别失败:", error);
+                    stopRecording();
+                    document.getElementById("messageStatus").textContent =
+                      "重试失败，请手动重试";
+                  }
+                }, 2000);
+
+                return; // 不调用stopRecording，因为我们要重试
+              }
+            } else if (event.error === "not-allowed") {
+              errorMessage = "麦克风访问被拒绝";
+            } else if (event.error === "aborted") {
+              errorMessage = "语音识别被中断";
+            } else if (event.error === "audio-capture") {
+              errorMessage = "无法捕获音频";
+            } else if (event.error === "no-speech") {
+              errorMessage = "未检测到语音";
+            } else if (event.error === "speech-timeout") {
+              errorMessage = "语音输入超时";
+            } else {
+              errorMessage = `错误: ${event.error}`;
+            }
+
+            document.getElementById("messageStatus").textContent = errorMessage;
             stopRecording();
           };
 
           recognition.onend = function () {
-            stopRecording();
-            // 如果识别到内容，自动发送
-            if (document.getElementById("userInput").value.trim()) {
-              sendTextMessage();
+            // 如果不是由于错误导致的结束且仍在录音状态，处理结果
+            if (isRecording2) {
+              stopRecording();
+              // 如果识别到内容，自动发送
+              if (document.getElementById("userInput").value.trim()) {
+                sendTextMessage();
+              }
             }
           };
         } else {
